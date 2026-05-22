@@ -1,48 +1,37 @@
-# Build stage untuk Go backend
-FROM golang:1.24.7-alpine AS go-builder
+# =========================
+# Build Stage
+# =========================
+FROM golang:1.24.7-alpine AS builder
 
 WORKDIR /app
 
-# Copy go mod files
+# Copy dependency files
 COPY go.mod go.sum ./
 
 # Download dependencies
 RUN go mod download
 
-# Copy source code
+# Copy source
 COPY . .
 
-# Build aplikasi
+# Build binary
 RUN CGO_ENABLED=0 GOOS=linux go build -o ocr-api ./cmd/api
 
-# Build stage untuk frontend Next.js (optional - uncomment jika perlu include frontend)
-# FROM node:20-alpine AS web-builder
-# WORKDIR /web
-# COPY web/package*.json ./
-# RUN npm ci
-# COPY web/ .
-# RUN npm run build
-
-# Final stage - runtime
+# =========================
+# Runtime Stage
+# =========================
 FROM alpine:3.20
 
 WORKDIR /app
 
-# Install ca-certificates untuk HTTPS
+# HTTPS certificates
 RUN apk add --no-cache ca-certificates
 
-# Copy binary dari builder stage
-COPY --from=go-builder /app/ocr-api .
+# Copy binary
+COPY --from=builder /app/ocr-api .
 
-# Expose port default
-EXPOSE 8088
+# Railway inject PORT automatically
+EXPOSE 8080
 
-# Default environment
-ENV PORT=8088
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/health || exit 1
-
-# Run aplikasi
+# Run app
 CMD ["./ocr-api"]
