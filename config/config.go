@@ -1,0 +1,53 @@
+package config
+
+import (
+	"log"
+
+	"github.com/joho/godotenv"
+	"github.com/spf13/viper"
+)
+
+type Config struct {
+	Port                    string
+	GeminiAPIKey            string
+	GeminiModel             string
+	CloudflareAccountID     string
+	CloudflareD1DatabaseID  string
+	CloudflareAPIToken      string
+	SupabaseURL             string
+	SupabaseServiceRoleKey  string
+	SupabaseBucket          string
+	FrontendAllowedOrigin   string
+}
+
+func Load() (*Config, error) {
+	// Load .env into system environment first
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found or error loading it")
+	}
+
+	viper.SetConfigFile(".env")
+	viper.AutomaticEnv() // This will now pick up values from godotenv
+
+	if err := viper.ReadInConfig(); err != nil {
+		return nil, err
+	}
+
+	viper.SetDefault("PORT", "8081")
+	viper.SetDefault("GEMINI_MODEL", "gemini-2.5-flash")
+	viper.SetDefault("SUPABASE_BUCKET", "ocr_ai_receipt")
+	viper.SetDefault("FRONTEND_ALLOWED_ORIGIN", "http://localhost:3000")
+
+	return &Config{
+		Port:                   viper.GetString("PORT"),
+		GeminiAPIKey:           viper.GetString("GEMINI_API_KEY"),
+		GeminiModel:            viper.GetString("GEMINI_MODEL"),
+		CloudflareAccountID:    viper.GetString("CLOUDFLARE_ACCOUNT_ID"),
+		CloudflareD1DatabaseID: viper.GetString("CLOUDFLARE_D1_DATABASE_ID"),
+		CloudflareAPIToken:     viper.GetString("CLOUDFLARE_API_TOKEN"),
+		SupabaseURL:            viper.GetString("SUPABASE_URL"),
+		SupabaseServiceRoleKey: viper.GetString("SUPABASE_SERVICE_ROLE_KEY"),
+		SupabaseBucket:         viper.GetString("SUPABASE_BUCKET"),
+		FrontendAllowedOrigin:  viper.GetString("FRONTEND_ALLOWED_ORIGIN"),
+	}, nil
+}

@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XPRASETIO-style Receipt Scanner</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter as the premium fallback for Cereal VF -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons for premium look -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#ff385c',          // Airbnb Rausch
+                        'primary-active': '#e00b41',   // Rausch Press
+                        'primary-disabled': '#ffd1da', // Rausch Disabled
+                        ink: '#222222',                // Base Text
+                        body: '#3f3f3f',               // Running Text
+                        muted: '#6a6a6a',              // Secondary
+                        'muted-soft': '#929292',       // Light Secondary
+                        hairline: '#dddddd',           // Divider Tone
+                        'hairline-soft': '#ebebeb',    // Soft Divider
+                        'border-strong': '#c1c1c1',    // Input border focus
+                        canvas: '#ffffff',             // App Floor
+                        'surface-soft': '#f7f7f7',     // Block hover/fill
+                        'surface-strong': '#f2f2f2',   // Element fill
+                    },
+                    borderRadius: {
+                        sm: '8px',
+                        md: '14px',
+                        lg: '20px',
+                        full: '9999px',
+                    },
+                    boxShadow: {
+                        'airbnb-shadow': 'rgba(0, 0, 0, 0.02) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 2px 6px 0px, rgba(0, 0, 0, 0.1) 0px 4px 8px 0px',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', '-apple-system', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #ffffff;
+            color: #222222;
+        }
+        /* Custom scrollbar to keep it clean */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f7f7f7;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #dddddd;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #c1c1c1;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+
+    <!-- Top Navigation Bar -->
+    <nav class="sticky top-0 z-40 bg-canvas border-b border-hairline h-20 flex items-center px-6 md:px-12 justify-between">
+        <!-- Logo Brand Left -->
+        <div class="flex items-center gap-2">
+            <div class="w-9 h-9 bg-primary rounded-full flex items-center justify-center text-white">
+                <i data-lucide="scan" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <span class="text-primary font-bold text-lg tracking-tight">XPRASETIO</span>
+                <span class="text-ink font-medium text-xs block -mt-1 tracking-widest uppercase opacity-75">scanner</span>
+            </div>
+        </div>
+
+        <!-- Middle Product Tabs -->
+        <div class="hidden md:flex items-center gap-8">
+            <button class="text-ink border-b-2 border-ink pb-6 pt-6 font-semibold text-sm flex items-center gap-2">
+                <i data-lucide="receipt" class="w-4 h-4"></i>
+                Receipt Scanner
+            </button>
+            <button onclick="toggleHistoryModal(true)" class="text-muted hover:text-ink pb-6 pt-6 font-medium text-sm flex items-center gap-2 transition">
+                <i data-lucide="history" class="w-4 h-4"></i>
+                Past Scans
+                <span id="history-badge" class="bg-primary text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold hidden">0</span>
+            </button>
+        </div>
+
+        <!-- Right Menu Utilities -->
+        <div class="flex items-center gap-3">
+            <!-- API Key Pill Indicator -->
+            <button onclick="openApiKeyModal()" class="flex items-center gap-2 border border-hairline hover:border-border-strong rounded-full p-2 pl-3 pr-4 transition text-xs font-medium text-ink bg-canvas">
+                <div id="key-indicator" class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></div>
+                <span id="key-label">Canvas Auto Key</span>
+            </button>
+            
+            <a href="https://github.com" target="_blank" class="w-10 h-10 border border-hairline hover:bg-surface-soft rounded-full flex items-center justify-center text-ink transition">
+                <i data-lucide="github" class="w-5 h-5"></i>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-[1280px] w-full mx-auto px-4 md:px-8 py-8 flex flex-col gap-8">
+        
+        <!-- Welcome Hero Info Banner -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between border border-hairline rounded-md p-6 bg-surface-soft gap-4">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="bg-ink text-canvas text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">NEW</span>
+                    <h1 class="text-lg font-semibold text-ink">Smart Receipt Analyzer</h1>
+                </div>
+                <p class="text-sm text-muted">Unggah struk belanja Anda untuk diekstrak otomatis menjadi data tabel terstruktur menggunakan model AI Gemini.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-muted font-medium">Cepat coba dengan:</span>
+                <button onclick="loadTemplate('starbucks')" class="px-3 py-1.5 bg-canvas border border-hairline rounded-full text-xs font-semibold text-ink hover:border-primary transition">☕ Starbucks</button>
+                <button onclick="loadTemplate('indomaret')" class="px-3 py-1.5 bg-canvas border border-hairline rounded-full text-xs font-semibold text-ink hover:border-primary transition">🏪 Indomaret</button>
+            </div>
+        </div>
+
+        <!-- Dashboard Two-Column Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- LEFT COLUMN: File Uploader & Controls (5 Cols) -->
+            <section class="lg:col-span-5 flex flex-col gap-4">
+                <div class="border border-hairline rounded-md p-5 bg-canvas flex flex-col gap-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-base font-semibold text-ink flex items-center gap-2">
+                            <i data-lucide="image" class="w-4 h-4 text-primary"></i>
+                            Sumber Gambar Struk
+                        </h2>
+                        <button id="clear-btn" onclick="clearUploader()" class="text-xs font-medium text-muted hover:text-primary transition hidden">Reset</button>
+                    </div>
+
+                    <!-- Dropzone Area -->
+                    <div id="drop-area" class="border-2 border-dashed border-hairline hover:border-primary rounded-md p-6 flex flex-col items-center justify-center min-h-[260px] bg-surface-soft cursor-pointer transition relative group overflow-hidden">
+                        <input type="file" id="file-input" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-10" onchange="handleFileSelect(event)">
+                        
+                        <!-- Empty State View -->
+                        <div id="upload-empty-state" class="flex flex-col items-center text-center gap-3">
+                            <div class="w-12 h-12 rounded-full bg-canvas flex items-center justify-center shadow-sm text-muted group-hover:text-primary transition">
+                                <i data-lucide="cloud-upload" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-ink">Klik atau seret file struk ke sini</p>
+                                <p class="text-xs text-muted mt-1">Mendukung JPEG, PNG hingga ukuran 5MB</p>
+                            </div>
+                        </div>
+
+                        <!-- Image Preview View -->
+                        <img id="image-preview" src="#" alt="Receipt Preview" class="absolute inset-0 w-full h-full object-contain hidden bg-black/5 p-2 rounded-md">
+                    </div>
+
+                    <!-- Left / Right Action Buttons -->
+                    <div class="grid grid-cols-2 gap-3 mt-2">
+                        <!-- LEFT BUTTON: Trigger file dialogue -->
+                        <button onclick="document.getElementById('file-input').click()" class="border border-ink text-ink font-semibold rounded-sm py-3 px-4 hover:bg-surface-soft transition text-sm flex items-center justify-center gap-2 h-12">
+                            <i data-lucide="file-plus" class="w-4 h-4"></i>
+                            Pilih File
+                        </button>
+
+                        <!-- RIGHT BUTTON: Run Analysis -->
+                        <button id="analyze-btn" onclick="runAnalysis()" disabled class="bg-primary-disabled text-white font-semibold rounded-sm py-3 px-4 transition text-sm flex items-center justify-center gap-2 h-12 cursor-not-allowed">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            Analisa Struk
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Guidance Info Panel -->
+                <div class="border border-hairline rounded-md p-4 bg-surface-soft flex gap-3">
+                    <i data-lucide="info" class="w-5 h-5 text-primary shrink-0 mt-0.5"></i>
+                    <p class="text-xs text-muted leading-relaxed">
+                        <strong>Tips hasil optimal:</strong> Pastikan teks pada struk tidak terpotong, bebas dari bayangan gelap, dan memiliki pencahayaan yang cukup.
+                    </p>
+                </div>
+            </section>
+
+            <!-- RIGHT COLUMN: Scanner Form Fields (7 Cols) -->
+            <section class="lg:col-span-7">
+                <div class="border border-hairline rounded-md bg-canvas shadow-airbnb-shadow p-6 relative">
+                    
+                    <!-- Header Form -->
+                    <div class="flex items-center justify-between border-b border-hairline pb-4 mb-6">
+                        <div>
+                            <span class="text-[10px] font-bold text-primary uppercase tracking-widest block">EXTRACTED CONTENT</span>
+                            <h2 class="text-lg font-bold text-ink">Data Hasil Scanner</h2>
+                        </div>
+                        <span id="status-tag" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-surface-strong text-muted flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-muted-soft"></span>
+                            Belum Ada Data
+                        </span>
+                    </div>
+
+                    <!-- Loader & Progress Panel -->
+                    <div id="loader-panel" class="hidden absolute inset-0 bg-canvas/95 z-20 rounded-md flex flex-col items-center justify-center p-8 transition-all">
+                        <div class="relative w-16 h-16 mb-6">
+                            <div class="absolute inset-0 border-4 border-hairline rounded-full"></div>
+                            <div class="absolute inset-0 border-4 border-t-primary rounded-full animate-spin"></div>
+                        </div>
+                        <h3 class="text-base font-semibold text-ink mb-1">Sedang Menganalisis Struk...</h3>
+                        <p class="text-xs text-muted text-center max-w-sm mb-6">AI Gemini sedang mengekstrak teks gambar, memetakan kategori item, serta mengonfirmasi harga.</p>
+                        
+                        <!-- Mini Checklist Loader -->
+                        <div class="w-full max-w-xs space-y-2.5 text-xs text-muted border-t border-hairline pt-4">
+                            <div class="flex items-center justify-between">
+                                <span class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i> Membaca data gambar</span>
+                                <span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded">Sukses</span>
+                            </div>
+                            <div class="flex items-center justify-between" id="progress-gemini">
+                                <span class="flex items-center gap-2"><i data-lucide="loader" class="w-4 h-4 text-primary animate-spin"></i> Memanggil LLM Gemini API</span>
+                                <span class="text-[10px] bg-primary/10 text-primary px-1.5 py-0.2 rounded animate-pulse">Running</span>
+                            </div>
+                            <div class="flex items-center justify-between opacity-50" id="progress-done">
+                                <span class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4"></i> Menyusun form tabel</span>
+                                <span class="text-[10px] bg-surface-strong text-muted px-1.5 py-0.2 rounded">Pending</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Empty State of Form -->
+                    <div id="form-empty-state" class="flex flex-col items-center justify-center py-16 text-center">
+                        <div class="w-16 h-16 bg-surface-soft rounded-full flex items-center justify-center text-muted mb-4">
+                            <i data-lucide="scan-line" class="w-8 h-8"></i>
+                        </div>
+                        <h3 class="text-base font-semibold text-ink">Belum Ada Struk yang Dianalisis</h3>
+                        <p class="text-xs text-muted max-w-sm mt-1 mb-6">Unggah struk Anda di sebelah kiri dan klik tombol "Analisa Struk" untuk melihat ekstraksi otomatis di form ini.</p>
+                        <button onclick="loadTemplate('starbucks')" class="px-4 py-2 bg-primary text-canvas rounded-full text-xs font-semibold hover:bg-primary-active transition shadow-sm flex items-center gap-1.5">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                            Coba Cepat dengan Template Mock
+                        </button>
+                    </div>
+
+                    <!-- Main Dynamic Form -->
+                    <form id="receipt-form" onsubmit="saveScanResult(event)" class="hidden space-y-6">
+                        
+                        <!-- Store Info & Date Grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Store Name -->
+                            <div class="flex flex-col border border-hairline rounded-sm focus-within:border-ink transition p-3">
+                                <label class="text-[10px] font-bold text-muted uppercase">Nama Toko / Merchant</label>
+                                <input type="text" id="form-merchant" required class="outline-none text-sm text-ink font-semibold mt-1 bg-transparent">
+                            </div>
+                            <!-- Date Input -->
+                            <div class="flex flex-col border border-hairline rounded-sm focus-within:border-ink transition p-3">
+                                <label class="text-[10px] font-bold text-muted uppercase">Tanggal Transaksi</label>
+                                <input type="date" id="form-date" required class="outline-none text-sm text-ink font-semibold mt-1 bg-transparent">
+                            </div>
+                        </div>
+
+                        <!-- Scanned Items Section -->
+                        <div>
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-xs font-bold text-muted uppercase tracking-wider">Daftar Barang / Item</h3>
+                                <button type="button" onclick="addNewItemRow()" class="text-xs font-semibold text-primary hover:text-primary-active transition flex items-center gap-1">
+                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah Item
+                                </button>
+                            </div>
+
+                            <!-- Items Table -->
+                            <div class="border border-hairline rounded-md overflow-hidden bg-surface-soft">
+                                <div class="grid grid-cols-12 gap-2 bg-canvas px-4 py-2 border-b border-hairline text-xs font-bold text-muted">
+                                    <div class="col-span-6">Nama Barang</div>
+                                    <div class="col-span-2 text-center">Jumlah</div>
+                                    <div class="col-span-3 text-right">Harga</div>
+                                    <div class="col-span-1"></div>
+                                </div>
+                                
+                                <!-- Dynamic List Container -->
+                                <div id="items-container" class="divide-y divide-hairline">
+                                    <!-- Rows added dynamically by JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Calculations Block (Airbnb Reservation Card style) -->
+                        <div class="border-t border-hairline pt-4 space-y-2 text-sm">
+                            <div class="flex justify-between text-muted">
+                                <span>Subtotal</span>
+                                <span id="form-subtotal">Rp 0</span>
+                            </div>
+                            <div class="flex justify-between text-muted items-center">
+                                <div class="flex items-center gap-1.5">
+                                    <span>Pajak & Layanan</span>
+                                    <input type="number" id="form-tax" value="0" oninput="recalculateTotals()" class="w-20 px-1.5 py-0.5 border border-hairline rounded text-xs text-ink outline-none text-right">
+                                </div>
+                                <span id="display-tax">Rp 0</span>
+                            </div>
+                            <div class="flex justify-between text-ink font-bold text-base border-t border-hairline pt-3 mt-1">
+                                <span>Total Tagihan</span>
+                                <span id="form-total">Rp 0</span>
+                            </div>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="flex items-center justify-between pt-4 border-t border-hairline">
+                            <span class="text-xs text-muted-soft flex items-center gap-1">
+                                <i data-lucide="shield-check" class="w-4 h-4 text-emerald-500"></i>
+                                Dapat diedit secara manual
+                            </span>
+                            <div class="flex gap-3">
+                                <button type="button" onclick="resetFormToEmpty()" class="px-4 py-2.5 border border-hairline hover:bg-surface-soft rounded-sm text-sm font-semibold text-ink transition">
+                                    Batal
+                                </button>
+                                <button type="submit" class="bg-primary hover:bg-primary-active text-canvas rounded-sm px-6 py-2.5 text-sm font-semibold transition flex items-center gap-2">
+                                    <i data-lucide="save" class="w-4 h-4"></i>
+                                    Simpan Transaksi
+                                </button>
+                            </div>
+                        </div>
+
+                    </form>
+
+                </div>
+            </section>
+
+        </div>
+
+        <!-- History / Recent Transactions Panel -->
+        <section class="mt-8 border-t border-hairline pt-8">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-ink">Transaksi Terbaru</h2>
+                    <p class="text-xs text-muted">Daftar struk yang berhasil disimpan secara lokal pada peramban Anda.</p>
+                </div>
+                <button onclick="clearAllHistory()" class="text-xs font-semibold text-muted hover:text-primary transition flex items-center gap-1">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Hapus Semua Riwayat
+                </button>
+            </div>
+
+            <!-- List of Saved Cards -->
+            <div id="history-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Fallback empty template -->
+                <div class="col-span-full border border-hairline rounded-md p-12 text-center bg-surface-soft">
+                    <div class="w-12 h-12 rounded-full bg-canvas flex items-center justify-center text-muted mx-auto mb-3">
+                        <i data-lucide="folder-open" class="w-6 h-6"></i>
+                    </div>
+                    <p class="text-sm font-semibold text-ink">Belum Ada Riwayat Transaksi</p>
+                    <p class="text-xs text-muted">Simpan hasil analisis struk Anda untuk melihat catatan riwayat di sini.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer Light Band -->
+    <footer class="bg-canvas border-t border-hairline py-8 px-6 md:px-12 mt-auto text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="text-xs text-muted">
+            &copy; 2026 Xprasetio Scanner Inc.
+        </div>
+        <div class="flex gap-4 text-xs font-medium text-ink">
+            <a href="#" class="hover:underline">Privacy Policy</a>
+            <a href="#" class="hover:underline">Terms of Service</a>
+            <a href="#" class="hover:underline">API Support</a>
+        </div>
+    </footer>
+
+    <!-- MODAL: Custom Toast Notification System -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+    <!-- MODAL: API Key Setup -->
+    <div id="apikey-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-canvas border border-hairline max-w-md w-full rounded-md shadow-airbnb-shadow p-6 relative">
+            <button onclick="closeApiKeyModal()" class="absolute top-4 right-4 text-muted hover:text-ink transition">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center">
+                    <i data-lucide="key" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-ink">Model & API Setup</h3>
+                    <p class="text-xs text-muted">Atur konfigurasi pemrosesan analisis struk.</p>
+                </div>
+            </div>
+            
+            <div class="space-y-4 text-xs">
+                <div class="bg-surface-soft p-3 rounded text-muted space-y-2">
+                    <p>Secara default, aplikasi ini berjalan menggunakan sistem **Canvas Auto-Fill Key** (tanpa setup).</p>
+                    <p>Jika Anda mengalami limitasi kuota (Error 429), Anda dapat mengisi API Key Anda sendiri secara opsional di bawah ini.</p>
+                </div>
+
+                <div class="flex flex-col border border-hairline rounded-sm p-3">
+                    <label class="font-bold text-muted uppercase">Gemini API Key (Opsional)</label>
+                    <input type="password" id="custom-api-key" placeholder="AIzaSy..." class="outline-none text-sm font-semibold mt-1 bg-transparent">
+                </div>
+
+                <div class="flex flex-col border border-hairline rounded-sm p-3">
+                    <label class="font-bold text-muted uppercase">Model Name</label>
+                    <select id="api-model-select" class="outline-none text-sm font-semibold mt-1 bg-transparent">
+                        <option value="gemini-3.1-flash-preview" selected>gemini-3.1-flash-preview (Recommended)</option>
+                        <option value="gemini-2.5-flash">gemini-2.5-flash (Standard)</option>
+                    </select>
+                </div>
+
+                <button onclick="saveApiKey()" class="w-full bg-ink hover:bg-black text-canvas font-semibold rounded-sm py-2.5 text-sm transition mt-2">
+                    Simpan Konfigurasi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core Application Logic -->
+    <script>
+        // Global variables
+        let selectedFileBase64 = null;
+        let selectedFileName = "";
+        let globalItems = [];
+        let savedHistory = [];
+
+        // Mock templates database
+        const mockReceiptTemplates = {
+            starbucks: {
+                merchantName: "Starbucks Coffee - Bandara Soekarno Hatta",
+                date: "2026-05-18",
+                items: [
+                    { name: "Caffe Latte Tall", quantity: 1, price: 48000 },
+                    { name: "Iced Caramel Macchiato Grande", quantity: 1, price: 59000 },
+                    { name: "Chocolate Croissant", quantity: 2, price: 32000 }
+                ],
+                tax: 17100,
+                total: 188100,
+                image: "https://placehold.co/600x800/ff385c/ffffff?text=Starbucks+Receipt+Mock"
+            },
+            indomaret: {
+                merchantName: "Indomaret Point Kemang Raya",
+                date: "2026-05-20",
+                items: [
+                    { name: "Aqua Air Mineral 600ml", quantity: 3, price: 3500 },
+                    { name: "Pringles Potato Sour Cream 107g", quantity: 1, price: 23500 },
+                    { name: "Indomilk UHT Chocolate 950ml", quantity: 1, price: 18900 },
+                    { name: "Garnier Men Face Wash 100ml", quantity: 1, price: 34500 }
+                ],
+                tax: 8740,
+                total: 96140,
+                image: "https://placehold.co/600x800/222222/ffffff?text=Indomaret+Receipt+Mock"
+            }
+        };
+
+        // Initialize application on window load
+        window.onload = function() {
+            lucide.createIcons();
+            loadHistoryFromStorage();
+            updateApiKeyIndicator();
+        }
+
+        // Handle File Drag & Drop or Selection
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            selectedFileName = file.name;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                selectedFileBase64 = e.target.result;
+                
+                // Render file preview on left panel
+                const previewImg = document.getElementById('image-preview');
+                const emptyState = document.getElementById('upload-empty-state');
+                const clearBtn = document.getElementById('clear-btn');
+                const analyzeBtn = document.getElementById('analyze-btn');
+
+                previewImg.src = selectedFileBase64;
+                previewImg.classList.remove('hidden');
+                emptyState.classList.add('hidden');
+                clearBtn.classList.remove('hidden');
+                
+                // Enable analysis trigger
+                analyzeBtn.disabled = false;
+                analyzeBtn.classList.remove('bg-primary-disabled', 'cursor-not-allowed');
+                analyzeBtn.classList.add('bg-primary', 'hover:bg-primary-active');
+
+                showToast("File '" + file.name + "' berhasil dimuat!", "success");
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Clear Upload Content
+        function clearUploader() {
+            document.getElementById('file-input').value = "";
+            document.getElementById('image-preview').classList.add('hidden');
+            document.getElementById('image-preview').src = "#";
+            document.getElementById('upload-empty-state').classList.remove('hidden');
+            document.getElementById('clear-btn').classList.add('hidden');
+            
+            const analyzeBtn = document.getElementById('analyze-btn');
+            analyzeBtn.disabled = true;
+            analyzeBtn.classList.add('bg-primary-disabled', 'cursor-not-allowed');
+            analyzeBtn.classList.remove('bg-primary', 'hover:bg-primary-active');
+
+            selectedFileBase64 = null;
+            selectedFileName = "";
+            showToast("Sumber gambar telah di-reset", "info");
+        }
+
+        // Load Predefined Mock Templates
+        function loadTemplate(key) {
+            const template = mockReceiptTemplates[key];
+            if (!template) return;
+
+            // Load to preview
+            const previewImg = document.getElementById('image-preview');
+            const emptyState = document.getElementById('upload-empty-state');
+            const clearBtn = document.getElementById('clear-btn');
+            const analyzeBtn = document.getElementById('analyze-btn');
+
+            selectedFileBase64 = template.image;
+            selectedFileName = key + "-mock-receipt.png";
+
+            previewImg.src = selectedFileBase64;
+            previewImg.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+            clearBtn.classList.remove('hidden');
+
+            analyzeBtn.disabled = false;
+            analyzeBtn.classList.remove('bg-primary-disabled', 'cursor-not-allowed');
+            analyzeBtn.classList.add('bg-primary', 'hover:bg-primary-active');
+
+            showToast("Template mock " + key.toUpperCase() + " berhasil dimuat!", "success");
+        }
+
+        // Run OCR Scanning Analysis (Real Gemini AI / Mock fallback)
+        async function runAnalysis() {
+            if (!selectedFileBase64) return;
+
+            // Show Loading Panel
+            const loader = document.getElementById('loader-panel');
+            loader.classList.remove('hidden');
+            
+            // Set Loading Progress
+            const progGemini = document.getElementById('progress-gemini');
+            const progDone = document.getElementById('progress-done');
+            progGemini.classList.remove('opacity-50');
+            progDone.classList.add('opacity-50');
+
+            try {
+                // If using a preset mock template image directly without real key, we can simulate analysis
+                if (selectedFileBase64.startsWith("https://placehold.co")) {
+                    await delay(1800); // Simulate network
+                    const matchingMockKey = selectedFileName.split("-")[0];
+                    const data = mockReceiptTemplates[matchingMockKey];
+                    populateScannerForm(data);
+                    showToast("Analisa cepat menggunakan Mock berhasil!", "success");
+                } else {
+                    // Try real Gemini API parsing
+                    await callRealGeminiAPI(selectedFileBase64);
+                }
+            } catch (err) {
+                console.error(err);
+                showToast("Real AI Scan Gagal, mengaktifkan simulasi Mock sebagai fallback...", "error");
+                
+                // Graceful fallback simulation
+                await delay(1200);
+                const randomMock = Math.random() > 0.5 ? mockReceiptTemplates.starbucks : mockReceiptTemplates.indomaret;
+                populateScannerForm(randomMock);
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+
+        // Real API processing with Gemini
+        async function callRealGeminiAPI(base64Image) {
+            // Retrieve config values
+            const storedKey = localStorage.getItem('custom_gemini_api_key') || "";
+            const selectedModel = document.getElementById('api-model-select').value || 'gemini-3.1-flash-preview';
+            
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${storedKey}`;
+            
+            // Extract raw base64 data without prefix format
+            const cleanBase64 = base64Image.split(',')[1];
+            const mimeType = base64Image.split(';')[0].split(':')[1] || "image/png";
+
+            // Prompt definition seeking structural parsing format
+            const promptInstruction = "Act as an expert receipt parser. Extract receipt details from the provided image. " +
+                "You must return purely a valid JSON string that matches the following schema format: " +
+                "{\n" +
+                "  \"merchantName\": \"Name of the store\",\n" +
+                "  \"date\": \"Purchase date as YYYY-MM-DD (convert format if necessary)\",\n" +
+                "  \"items\": [\n" +
+                "    { \"name\": \"Item name\", \"quantity\": 1, \"price\": 10000 }\n" +
+                "  ],\n" +
+                "  \"tax\": 5000,\n" +
+                "  \"total\": 105000\n" +
+                "}\n" +
+                "Do not include markdown container blocks or code formatting wrappers like ```json. Return ONLY valid raw JSON.";
+
+            const payload = {
+                contents: [
+                    {
+                        parts: [
+                            { text: promptInstruction },
+                            {
+                                inlineData: {
+                                    mimeType: mimeType,
+                                    data: cleanBase64
+                                }
+                            }
+                        ]
+                    }
+                ],
+                generationConfig: {
+                    responseMimeType: "application/json"
+                }
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                const errCode = response.status;
+                if (errCode === 429) {
+                    throw new Error("Quota exceeded. Triggering fallback.");
+                }
+                throw new Error(errData.error?.message || `HTTP ${errCode}`);
+            }
+
+            const result = await response.json();
+            const textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            if (textResponse) {
+                const parsedData = JSON.parse(textResponse.trim());
+                populateScannerForm(parsedData);
+                showToast("Analisa Struk Gemini API Sukses!", "success");
+            } else {
+                throw new Error("Format output Gemini tidak sesuai.");
+            }
+        }
+
+        // Populate Gemini output into form
+        function populateScannerForm(data) {
+            document.getElementById('form-empty-state').classList.add('hidden');
+            document.getElementById('receipt-form').classList.remove('hidden');
+
+            // Values
+            document.getElementById('form-merchant').value = data.merchantName || "Unknown Merchant";
+            document.getElementById('form-date').value = data.date || new Date().toISOString().substring(0, 10);
+            document.getElementById('form-tax').value = data.tax || 0;
+
+            // Status Tag Update
+            const statusTag = document.getElementById('status-tag');
+            statusTag.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Teranalisis`;
+            statusTag.classList.remove('bg-surface-strong', 'text-muted');
+            statusTag.classList.add('bg-emerald-100', 'text-emerald-800');
+
+            // Build dynamic items list
+            globalItems = data.items || [];
+            renderItemsList();
+            recalculateTotals();
+        }
+
+        // Render items into dynamic GUI elements
+        function renderItemsList() {
+            const container = document.getElementById('items-container');
+            container.innerHTML = "";
+
+            if (globalItems.length === 0) {
+                container.innerHTML = `<div class="p-4 text-center text-xs text-muted">Belum ada item ditambahkan</div>`;
+                return;
+            }
+
+            globalItems.forEach((item, index) => {
+                const row = document.createElement('div');
+                row.className = "grid grid-cols-12 gap-2 px-4 py-2.5 items-center bg-canvas hover:bg-surface-soft/50 transition text-sm";
+                row.innerHTML = `
+                    <!-- Item Name Input -->
+                    <div class="col-span-6">
+                        <input type="text" value="${item.name}" oninput="updateItemValue(${index}, 'name', this.value)" placeholder="Nama Barang" class="w-full bg-transparent font-medium text-ink outline-none focus:border-b focus:border-ink pb-0.5">
+                    </div>
+                    <!-- Quantity Input -->
+                    <div class="col-span-2">
+                        <input type="number" min="1" value="${item.quantity || 1}" oninput="updateItemValue(${index}, 'quantity', parseInt(this.value))" class="w-full text-center bg-transparent text-ink font-semibold outline-none focus:border-b focus:border-ink pb-0.5">
+                    </div>
+                    <!-- Total Price Input -->
+                    <div class="col-span-3 text-right">
+                        <div class="flex items-center justify-end gap-1 font-semibold text-ink">
+                            <span class="text-xs text-muted-soft">Rp</span>
+                            <input type="number" value="${item.price}" oninput="updateItemValue(${index}, 'price', parseFloat(this.value))" class="w-20 text-right bg-transparent outline-none focus:border-b focus:border-ink pb-0.5">
+                        </div>
+                    </div>
+                    <!-- Delete row -->
+                    <div class="col-span-1 text-center">
+                        <button type="button" onclick="removeItemRow(${index})" class="text-muted hover:text-primary p-1 rounded-full hover:bg-surface-strong transition flex items-center justify-center mx-auto">
+                            <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+            lucide.createIcons();
+        }
+
+        // Add blank custom row manually to form
+        function addNewItemRow() {
+            globalItems.push({ name: "Barang Baru", quantity: 1, price: 10000 });
+            renderItemsList();
+            recalculateTotals();
+            showToast("Satu baris item kosong ditambahkan", "info");
+        }
+
+        // Remove row helper
+        function removeItemRow(index) {
+            globalItems.splice(index, 1);
+            renderItemsList();
+            recalculateTotals();
+        }
+
+        // Synchronize manual inputs with data state
+        function updateItemValue(index, field, value) {
+            if (globalItems[index]) {
+                globalItems[index][field] = value;
+                recalculateTotals();
+            }
+        }
+
+        // Keep calculations updated
+        function recalculateTotals() {
+            let subtotal = 0;
+            globalItems.forEach(item => {
+                const qty = parseInt(item.quantity) || 0;
+                const price = parseFloat(item.price) || 0;
+                subtotal += (qty * price);
+            });
+
+            const taxInput = parseFloat(document.getElementById('form-tax').value) || 0;
+            const grandTotal = subtotal + taxInput;
+
+            document.getElementById('form-subtotal').innerText = formatRupiah(subtotal);
+            document.getElementById('display-tax').innerText = formatRupiah(taxInput);
+            document.getElementById('form-total').innerText = formatRupiah(grandTotal);
+        }
+
+        // Reset scanning panel views back to default
+        function resetFormToEmpty() {
+            document.getElementById('receipt-form').classList.add('hidden');
+            document.getElementById('form-empty-state').classList.remove('hidden');
+            
+            const statusTag = document.getElementById('status-tag');
+            statusTag.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-muted-soft"></span> Belum Ada Data`;
+            statusTag.className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-surface-strong text-muted flex items-center gap-1.5";
+            
+            globalItems = [];
+        }
+
+        // Save scanned receipt data into local persistent memory
+        function saveScanResult(event) {
+            event.preventDefault();
+            const merchant = document.getElementById('form-merchant').value;
+            const date = document.getElementById('form-date').value;
+            const tax = parseFloat(document.getElementById('form-tax').value) || 0;
+
+            let finalTotal = 0;
+            globalItems.forEach(item => {
+                finalTotal += ((parseInt(item.quantity) || 1) * (parseFloat(item.price) || 0));
+            });
+            finalTotal += tax;
+
+            const newScan = {
+                id: "scan-" + Date.now(),
+                merchantName: merchant,
+                date: date,
+                itemCount: globalItems.length,
+                total: finalTotal
+            };
+
+            savedHistory.unshift(newScan);
+            localStorage.setItem('scanned_receipt_history_airbnb', JSON.stringify(savedHistory));
+            
+            renderHistoryGrid();
+            resetFormToEmpty();
+            clearUploader();
+            showToast("Transaksi di '" + merchant + "' sukses tersimpan!", "success");
+        }
+
+        // Load scans list from localStorage
+        function loadHistoryFromStorage() {
+            const raw = localStorage.getItem('scanned_receipt_history_airbnb');
+            if (raw) {
+                savedHistory = JSON.parse(raw);
+                renderHistoryGrid();
+            }
+        }
+
+        // Render past scans into clean property-styled cards
+        function renderHistoryGrid() {
+            const grid = document.getElementById('history-grid');
+            const badge = document.getElementById('history-badge');
+            
+            if (savedHistory.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full border border-hairline rounded-md p-12 text-center bg-surface-soft">
+                        <div class="w-12 h-12 rounded-full bg-canvas flex items-center justify-center text-muted mx-auto mb-3">
+                            <i data-lucide="folder-open" class="w-6 h-6"></i>
+                        </div>
+                        <p class="text-sm font-semibold text-ink">Belum Ada Riwayat Transaksi</p>
+                        <p class="text-xs text-muted">Simpan hasil analisis struk Anda untuk melihat catatan riwayat di sini.</p>
+                    </div>
+                `;
+                badge.classList.add('hidden');
+                return;
+            }
+
+            badge.innerText = savedHistory.length;
+            badge.classList.remove('hidden');
+
+            grid.innerHTML = "";
+            savedHistory.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "border border-hairline hover:border-ink rounded-md bg-canvas shadow-sm hover:shadow-airbnb-shadow transition p-5 flex flex-col justify-between relative group";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-full bg-surface-soft flex items-center justify-center text-primary">
+                                    <i data-lucide="receipt" class="w-4 h-4"></i>
+                                </span>
+                                <div>
+                                    <h3 class="text-sm font-bold text-ink truncate max-w-[160px]">${item.merchantName}</h3>
+                                    <p class="text-[11px] text-muted-soft">${formatDateIndo(item.date)}</p>
+                                </div>
+                            </div>
+                            <span class="bg-surface-soft text-ink font-semibold text-[10px] px-2 py-0.5 rounded-full border border-hairline">
+                                ${item.itemCount} Item
+                            </span>
+                        </div>
+                    </div>
+                    <div class="border-t border-hairline-soft pt-3 mt-4 flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] text-muted-soft uppercase font-bold block">TOTAL TAGIHAN</span>
+                            <span class="text-sm font-bold text-primary">${formatRupiah(item.total)}</span>
+                        </div>
+                        <button onclick="deleteSingleHistory('${item.id}')" class="text-muted hover:text-primary p-1.5 rounded-full hover:bg-surface-soft transition opacity-0 group-hover:opacity-100 duration-200">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        // Delete single record helper
+        function deleteSingleHistory(id) {
+            savedHistory = savedHistory.filter(i => i.id !== id);
+            localStorage.setItem('scanned_receipt_history_airbnb', JSON.stringify(savedHistory));
+            renderHistoryGrid();
+            showToast("Satu riwayat berhasil dihapus", "info");
+        }
+
+        // Clear entire database
+        function clearAllHistory() {
+            if (confirm("Apakah Anda yakin ingin menghapus seluruh riwayat scan?")) {
+                savedHistory = [];
+                localStorage.removeItem('scanned_receipt_history_airbnb');
+                renderHistoryGrid();
+                showToast("Semua riwayat terhapus total!", "info");
+            }
+        }
+
+        // API Key Modal Dialog controls
+        function openApiKeyModal() {
+            document.getElementById('apikey-modal').classList.remove('hidden');
+            const storedKey = localStorage.getItem('custom_gemini_api_key') || "";
+            document.getElementById('custom-api-key').value = storedKey;
+        }
+
+        function closeApiKeyModal() {
+            document.getElementById('apikey-modal').classList.add('hidden');
+        }
+
+        function saveApiKey() {
+            const val = document.getElementById('custom-api-key').value.trim();
+            if (val) {
+                localStorage.setItem('custom_gemini_api_key', val);
+                showToast("API Key kustom berhasil disimpan!", "success");
+            } else {
+                localStorage.removeItem('custom_gemini_api_key');
+                showToast("Beralih kembali menggunakan Canvas Auto Key", "info");
+            }
+            updateApiKeyIndicator();
+            closeApiKeyModal();
+        }
+
+        function updateApiKeyIndicator() {
+            const hasKey = localStorage.getItem('custom_gemini_api_key');
+            const indicator = document.getElementById('key-indicator');
+            const label = document.getElementById('key-label');
+
+            if (hasKey) {
+                indicator.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
+                label.innerText = "Custom API Key Active";
+            } else {
+                indicator.className = "w-2.5 h-2.5 rounded-full bg-primary animate-pulse";
+                label.innerText = "Canvas Auto Key";
+            }
+        }
+
+        // Utility: Delay helper
+        const delay = ms => new Promise(res => setTimeout(res, ms));
+
+        // Utility: Toast notifications generator
+        function showToast(msg, type = "info") {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let icon = "info";
+            let colorClasses = "bg-white border-hairline text-ink";
+            if (type === "success") {
+                icon = "circle-check";
+                colorClasses = "bg-emerald-50 text-emerald-800 border-emerald-100";
+            } else if (type === "error") {
+                icon = "circle-alert";
+                colorClasses = "bg-rose-50 text-rose-800 border-rose-100";
+            }
+
+            toast.className = `p-4 border rounded-md shadow-airbnb-shadow ${colorClasses} pointer-events-auto flex items-center gap-3 transition-all duration-300 translate-y-2 opacity-0`;
+            toast.innerHTML = `
+                <i data-lucide="${icon}" class="w-5 h-5 shrink-0"></i>
+                <span class="text-xs font-semibold">${msg}</span>
+            `;
+
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            // Anim state triggering
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            // Self cleanup duration
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Utility: Indonesian Currency formatter
+        function formatRupiah(number) {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0
+            }).format(number);
+        }
+
+        // Utility: Format date to local readable text
+        function formatDateIndo(dateStr) {
+            if (!dateStr) return "";
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            return new Date(dateStr).toLocaleDateString('id-ID', options);
+        }
+    </script>
+</body>
+</html>

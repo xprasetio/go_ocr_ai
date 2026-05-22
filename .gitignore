@@ -1,0 +1,77 @@
+# Binaries
+ocr_ai
+ocr_ai.exe
+*.exe
+
+# Build artifacts
+/dist/
+/bin/
+/*.exe
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Cache
+.cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Go
+go.mod.bak
+go.sum.bak
+
+# Web / Frontend
+/node_modules/
+/public/build/
+.next/
+.nuxt/
+dist/
+build/
+*.map
+*.tsbuildinfo
+
+# Web frameworks
+/out/
+.svelte-kit/
+.vela/
+output/
+
+# Browser debug logs
+browser-debug.log
+
+# PWA
+service-worker.js
+manifest.json
+
+# NPM / Yarn
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/*
+!.idea/workspace.xml
+!.idea/tasks.xml
+.DS_Store
+*.orig
+
+node_modules/
+web/node_modules/
+.next/
+.cache
+web/*
