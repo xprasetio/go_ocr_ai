@@ -21,20 +21,23 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
-
-	// OPTIONAL local .env
+	// Load .env into system environment first
 	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, using system environment")
+		log.Println("No .env file found or error loading it")
 	}
 
-	// ENV from system / Railway
-	viper.AutomaticEnv()
+	viper.SetConfigFile(".env")
+	viper.AutomaticEnv() // This will now pick up values from godotenv
 
-	// Default values
+	if err := viper.ReadInConfig(); err != nil {
+		return nil, err
+	}
+
 	viper.SetDefault("PORT", "8088")
 	viper.SetDefault("GEMINI_MODEL", "gemini-2.5-flash")
 	viper.SetDefault("SUPABASE_BUCKET", "ocr_ai_receipt")
-	viper.SetDefault("FRONTEND_ALLOWED_ORIGIN", "https://ocr-ai.xprasetio.workers.dev")
+	viper.SetDefault("FRONTEND_ALLOWED_ORIGIN", "https://ocr-ai.xprasetio.workers.dev/")
+	// viper.SetDefault("FRONTEND_ALLOWED_ORIGIN", "http://localhost:3000")
 
 	return &Config{
 		Port:                   viper.GetString("PORT"),
